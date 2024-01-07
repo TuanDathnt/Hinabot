@@ -1,4 +1,0 @@
-[packages]
-discord= "*"
-[requires]
-python_version = "3.10.12"
