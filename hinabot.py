@@ -2,7 +2,33 @@ import discord
 import os
 from discord.ext import commands
 import datetime
+import sqlite3
+
 from datetime import timedelta
+
+def saveTimeStudy(id,time_study):
+  conn = sqlite3.connect("db.db")
+  cursor = conn.cursor()
+
+  
+  cursor.execute("SELECT time_study from users Where id=?",(id,))
+  user = cursor.fetchone()
+  if user:
+    time_parts = user[0].split(':')
+    hours = int(time_parts[0])
+    minutes = int(time_parts[1])
+    seconds = int(time_parts[2].split('.')[0])
+    microseconds = int(time_parts[2].split('.')[1])
+    time_delta = timedelta(hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds)
+    time_study = time_study+time_delta
+    cursor.execute("UPDATE users Set time_study=? where id=?",(str(time_study),id))
+    conn.commit()
+  else:
+    sqlcommand = "INSERT INTO users (id,time_study) values(?,?)"
+    cursor.execute(sqlcommand,(id,str(time_study)))
+    conn.commit()
+  
+  conn.close()
 
 bot = commands.Bot(command_prefix='?', intents=discord.Intents.all())
 bot.remove_command('help')
@@ -31,14 +57,27 @@ async def ping(ctx):
 
 @bot.command(name='studytime')
 async def studytime(ctx):
-  if ctx.author.id not in member_time_total:
-     member_time_total[ctx.author.id]=timedelta(days=0, hours=0, minutes=0, seconds=0)
-  time_study = member_time_total[ctx.author.id]
-  days = time_study.days
-  hours, remainder = divmod(time_study.seconds, 3600)
-  minutes, seconds = divmod(remainder, 60)
-  formatted_study = f"{days} days, {hours:02}:{minutes:02}:{seconds:02}"
-  await ctx.send(f"You have been studying for {formatted_study}!")
+  conn = sqlite3.connect("db.db")
+  cursor = conn.cursor()
+
+  
+  cursor.execute("SELECT time_study from users Where id=?",(ctx.author.id,))
+  user = cursor.fetchone()
+  if(user):
+    time_parts = user[0].split(':')
+    hours = int(time_parts[0])
+    minutes = int(time_parts[1])
+    seconds = int(time_parts[2].split('.')[0])
+    microseconds = int(time_parts[2].split('.')[1])
+    time_delta = timedelta(hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds)
+    time_study = time_delta
+    days = time_study.days
+    hours, remainder = divmod(time_study.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    formatted_study = f"{days} days, {hours:02}:{minutes:02}:{seconds:02}"
+    await ctx.send(f"You have been studying for {formatted_study}!")
+  else:
+    await ctx.send(f"You so lazy")
 @bot.command(name='help')
 async def help(ctx):
   em = discord.Embed(title='Help',
@@ -50,7 +89,6 @@ async def help(ctx):
       '`?hello` to say hello to me!\n`?ping` to check my ping!\n`?help` to see this message!',
       inline=False)
   await ctx.send(embed=em)
-
 
 
 
@@ -69,7 +107,7 @@ async def on_voice_state_update(member, before, after):
     await channel.send(
         f"{member.name} đã bắt đầu học lúc {formatted_timestart}")
 
-  elif (before.channel.id == target_voice_room_id and before.channel and before.channel != after.channel):
+  elif before.channel.id == target_voice_room_id and before.channel and before.channel != after.channel:
     # Người dùng vừa rời khỏi phòng thoại
     end_time = datetime.datetime.now() - member_time_in[member.id]
     days = end_time.days
@@ -78,9 +116,10 @@ async def on_voice_state_update(member, before, after):
     if member.id not in member_time_total:
        member_time_total[member.id]=timedelta(days=0, hours=0, minutes=0, seconds=0)
     member_time_total[member.id] = end_time+member_time_total[member.id]
+
     # Định dạng thành chuỗi
     formatted_timedelta = f"{days} days, {hours:02}:{minutes:02}:{seconds:02}"
-
+    saveTimeStudy(member.id,member_time_total[member.id])
     await channel.send(
         f"{member.name} đã cảm thấy bất lực: thời gian học{formatted_timedelta}"
     )
