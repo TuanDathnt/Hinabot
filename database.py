@@ -16,6 +16,22 @@ def deleteTable():
   conn.commit()
   conn.close()
   print("OK")
+def addColumn():
+  conn = sqlite3.connect("db.db")
+  cursor = conn.cursor()
+  sqlcommand = "ALTER TABLE users ADD user_name String"
+  cursor.execute(sqlcommand)
+  conn.commit()
+  conn.close()
+  print("OK")
+def addData():
+  conn = sqlite3.connect("db.db")
+  cursor = conn.cursor()
+  sqlcommand = "UPDATE users Set user_name='TuanDat' where id=1175423277552902230"
+  cursor.execute(sqlcommand)
+  conn.commit()
+  conn.close()
+  print("OK")
 if __name__=="__main__":
-  createTable()
+  addData()
   

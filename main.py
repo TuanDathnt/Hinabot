@@ -5,7 +5,20 @@ import datetime
 import sqlite3
 
 from datetime import timedelta
-
+def convertTimedelta(s):
+  time_parts = s.split(':')
+  hours = int(time_parts[0])
+  minutes = int(time_parts[1])
+  seconds = int(time_parts[2].split('.')[0])
+  microseconds = int(time_parts[2].split('.')[1])
+  return timedelta(hours=hours, minutes=minutes, seconds=seconds, microseconds=microseconds)
+def convertTimedeltaToString(s):
+  time_study = s
+  days = time_study.days
+  hours, remainder = divmod(time_study.seconds, 3600)
+  minutes, seconds = divmod(remainder, 60)
+  formatted_study = f"{days} days, {hours:02}:{minutes:02}:{seconds:02}"
+  return formatted_study
 def saveTimeStudy(id,time_study):
   conn = sqlite3.connect("db.db")
   cursor = conn.cursor()
@@ -50,6 +63,47 @@ async def on_message(message):
 async def hello(ctx):
   await ctx.send('Hello There!')
 
+@bot.command(name='botngu')
+async def hello(ctx):
+  await ctx.send('''“HỌC, HỌC NỮA, HỌC MÃI”
+                                    -Lenin-''')
+
+@bot.command(name='ranking')
+async def hello(ctx):
+  conn = sqlite3.connect("db.db")
+  cursor = conn.cursor()
+
+  
+  cursor.execute("SELECT * from users")
+  results = cursor.fetchall()
+  users = []
+  
+# Duyệt qua mỗi tuple trong danh sách users
+  for user in results:
+    # Chuyển tuple thành danh sách và thêm vào danh sách user_lists
+    user_list = list(user)
+    users.append(user_list)
+
+  for user in users:
+    user[1] = convertTimedelta(user[1])
+  sorted_users = sorted(users, key=lambda user: user[1],reverse=True)
+  message =""
+  ranking =1
+  for user in sorted_users:
+    if user[2]:
+      message =  message + "Top" +str(ranking)+"Name:"+user[2]+", time study:" + convertTimedeltaToString(user[1])
+      message = message +"\n"
+      ranking= ranking+1
+
+  conn.close()
+  em = discord.Embed(title='Ranking',
+                     
+                     color=000000)
+  em.add_field(name="Ranking",
+      value=
+      message,
+      inline=False)
+  await ctx.send(embed=em)
 
 @bot.command(name='ping')
 async def ping(ctx):
